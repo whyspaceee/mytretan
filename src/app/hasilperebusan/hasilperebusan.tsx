@@ -93,6 +93,8 @@ export default function HasilPerebusan({ session, previousBatches }: { session: 
                 },
             ];
         });
+        setBarcode("")
+        setBerat(0)
     };
 
     const deleteData = (id: string) => {

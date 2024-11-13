@@ -30,17 +30,17 @@ export const productRouter = createTRPCRouter({
       });
     }),
 
-   getProductAmount: protectedProcedure
+  getProductAmount: protectedProcedure
     .input(z.string())
     .query(async ({ ctx, input }) => {
       const products = await ctx.db.query.inputProducts.findMany({
         where: eq(inputProducts.productId, input),
-        columns: {quantity : true}
+        columns: { quantity: true }
       });
       return products.reduce((acc, product) => acc + product.quantity, 0);
     }),
 
-   inputManualBatch: protectedProcedure
+  inputManualBatch: protectedProcedure
     .input(z.object({ products: z.array(z.object({ id: z.string(), amount: z.number().positive() })) }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -60,10 +60,10 @@ export const productRouter = createTRPCRouter({
         }))
       );
 
-    
+
     }),
 
-    updateBatchWeight: protectedProcedure
+  updateBatchWeight: protectedProcedure
     .input(z.array(z.object({ batchId: z.string(), weight: z.number().positive() })))
     .mutation(async ({ ctx, input }) => {
       for (const batch of input) {
@@ -75,7 +75,7 @@ export const productRouter = createTRPCRouter({
       }
     }),
 
-    inputGrinding: protectedProcedure
+  inputGrinding: protectedProcedure
     .input(z.object({ batchesId: z.array(z.string()) }))
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
@@ -86,14 +86,26 @@ export const productRouter = createTRPCRouter({
         userId,
       });
 
-      for(const batch of input.batchesId){
+      for (const batch of input.batchesId) {
         console.log("batch", batch)
         await ctx.db.update(manualBatch).set({
           grindingId: grindingId,
           status: "grinding"
         }).where(eq(manualBatch.batchId, batch));
       }
-    })
+    }),
+
+  finalWeightIn: protectedProcedure
+    .input(z.array(z.object({ grindingId: z.string(), weight: z.number().positive() })))
+    .mutation(async ({ ctx, input }) => {
+      for (const i of input) {
+        await ctx.db.update(grinding).set({
+          weight: i.weight,
+          status: "completed",
+          finishedAt: new Date()
+        }).where(eq(grinding.grindingId, i.grindingId));
+      }
+    }),
 
 });
 

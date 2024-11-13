@@ -13,7 +13,6 @@ export default async function HasilPerebusanPage() {
     }
 
     const previousBatches = await db.query.manualBatch.findMany({
-        where: eq(manualBatch.status, "pending"),
         with: {
             user: true,
             manualBatchProducts: true

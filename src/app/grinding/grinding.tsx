@@ -101,6 +101,7 @@ export default function Grinding({ session, previousBatches, previousGrinding }:
 
             return [...prevData, productData]
         });
+        setBarcode("")
     };
 
     const deleteData = (id: string) => {

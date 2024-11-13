@@ -1,10 +1,10 @@
 import { redirect } from 'next/navigation'
 import { auth } from "~/server/auth";
-import HasilPerebusan from './hasilperebusan';
+import HasilPerebusan from './hasilpenimbangan';
 import { eq } from 'drizzle-orm';
 import { db } from '~/server/db';
-import { manualBatch } from '~/server/db/schema';
-import HasilPenimbanganAkhir from './hasilperebusan';
+import { grinding, manualBatch } from '~/server/db/schema';
+import HasilPenimbanganAkhir from './hasilpenimbangan';
 
 export default async function HasilPenimbanganAkhirPage() {
     const session = await auth();
@@ -13,16 +13,15 @@ export default async function HasilPenimbanganAkhirPage() {
         redirect('/');
     }
 
-    const previousBatches = await db.query.manualBatch.findMany({
-        where: eq(manualBatch.status, "pending"),
+    const previousGrinding = await db.query.grinding.findMany({
         with: {
             user: true,
-            manualBatchProducts: true
+            manualBatch: true
         },
-        orderBy: (manualBatch, { desc }) => [desc(manualBatch.createdAt)]
+        orderBy: (manualBatch, { desc }) => [desc(grinding.createdAt)]
     });
 
     return (
-        <HasilPenimbanganAkhir session={session} previousBatches={previousBatches}  />
+        <HasilPenimbanganAkhir session={session} previousGrinding={previousGrinding}  />
     )
 }

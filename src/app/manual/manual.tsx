@@ -119,6 +119,7 @@ export default function Manual({ session, previousBatches, freezerItems }: { ses
                 tanggal: productData.productdate
             }]
         });
+        setBarcode("")
     };
 
     const deleteData = (id: string) => {

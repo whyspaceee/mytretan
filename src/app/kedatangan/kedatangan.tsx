@@ -86,6 +86,7 @@ export default function Kedatangan({ session }: { session: Session }) {
                     },
                 ];
         });
+        setBarcode("")
     };
 
     const deleteData = (id: string) => {

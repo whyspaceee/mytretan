@@ -19,20 +19,22 @@ import { ManualBatch } from "../manual/manual";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { Grinding } from "../grinding/grinding";
 
-export default function HasilPenimbanganAkhir({ session, previousBatches }: { session: Session, previousBatches: ManualBatch[] }) {
+export default function HasilPenimbanganAkhir({ session, previousGrinding }: { session: Session, previousGrinding: Grinding[] }) {
     const freezers = Array.from({ length: 8 }, (_, i) => i + 1)
     const [barcode, setBarcode] = useState<string>("")
     const [berat, setBerat] = useState<number>(0)
     const [barcodeError, setBarcodeError] = useState<string | null>(null)
-    const [data, setData] = useState<BatchesWithWeight[]>([])
+    const [data, setData] = useState<GrindingWithWeight[]>([])
     const [dialogOpen, setDialogOpen] = useState(false)
     const buttonRef = useRef<HTMLButtonElement>(null)
     const router = useRouter()
 
-    console.log(previousBatches)
+    console.log(previousGrinding)
 
-    const mutation = api.product.updateBatchWeight.useMutation({
+
+    const mutation = api.product.finalWeightIn.useMutation({
         onSuccess: () => {
             setData([])
             alert("Data berhasil disimpan")
@@ -45,17 +47,17 @@ export default function HasilPenimbanganAkhir({ session, previousBatches }: { se
             return
         }
 
-        const batchData = data.map((item) => ({
-            batchId: item.id,
+        const input = data.map((item) => ({
+            grindingId: item.id,
             weight: item.weight
         }))
 
-        mutation.mutate(batchData)
+        await mutation.mutateAsync(input)
     }
 
 
     const onSubmit = () => {
-        const result = previousBatches.find((batch) => batch.batchId === barcode);
+        const result = previousGrinding.find((batch) => batch.grindingId === barcode);
 
         if (!result) {
             setBarcodeError("Batch tidak ditemukan")
@@ -93,6 +95,8 @@ export default function HasilPenimbanganAkhir({ session, previousBatches }: { se
                 },
             ];
         });
+        setBarcode("")
+        setBerat(0)
     };
 
     const deleteData = (id: string) => {
@@ -100,10 +104,10 @@ export default function HasilPenimbanganAkhir({ session, previousBatches }: { se
         setData(newData);
     }
 
-    const columns: ColumnDef<BatchesWithWeight>[] = [
+    const columns: ColumnDef<GrindingWithWeight>[] = [
         {
             accessorKey: "id",
-            header: "ID Batch",
+            header: "ID Grinding",
         },
         {
             accessorKey: "weight",
@@ -131,7 +135,7 @@ export default function HasilPenimbanganAkhir({ session, previousBatches }: { se
         },
         {
             accessorKey: "createdAt",
-            header: "Waktu masuk perebusan",
+            header: "Waktu masuk grinding",
             cell: (cell) => {
                 const date = cell.row.original.createdAt;
                 return Intl.DateTimeFormat('id-ID', {
@@ -230,7 +234,7 @@ export default function HasilPenimbanganAkhir({ session, previousBatches }: { se
                 </div>
                 <Collapsible defaultOpen={true} className="m-8">
                     <CollapsibleTrigger className=" text-xl font-semibold text-primary inline-flex items-center gap-2">
-                        <p>Batch sebelumnya</p>
+                        <p>Grinding sebelumnya</p>
                         <ChevronsUpDown size={24} />
                     </CollapsibleTrigger>
                     <CollapsibleContent>
@@ -239,7 +243,6 @@ export default function HasilPenimbanganAkhir({ session, previousBatches }: { se
                                 <TableRow>
                                     <TableHead>Batch ID</TableHead>
                                     <TableHead>ID Susu</TableHead>
-                                    <TableHead>Jumlah(L)</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Dibuat pada</TableHead>
                                     <TableHead>Selesai pada</TableHead>
@@ -250,23 +253,17 @@ export default function HasilPenimbanganAkhir({ session, previousBatches }: { se
                             </TableHeader>
                             <TableBody>
 
-                                {previousBatches.map((batch) => (
-                                    <TableRow key={batch.batchId}>
-                                        <TableCell>{batch.batchId}</TableCell>
+                                {previousGrinding.map((batch) => (
+                                    <TableRow key={batch.grindingId}>
+                                        <TableCell>{batch.grindingId}</TableCell>
                                         <TableCell>
                                             {
-                                                batch.manualBatchProducts.map((product) => (
-                                                    <p key={product.productId}>{product.productId}</p>
+                                                batch.manualBatch.map((product) => (
+                                                    <p key={product.batchId}>{product.batchId}</p>
                                                 ))
                                             }
                                         </TableCell>
-                                        <TableCell>
-                                            {
-                                                batch.manualBatchProducts.map((product) => (
-                                                    <p key={product.productId}>{product.quantity}</p>
-                                                ))
-                                            }
-                                        </TableCell>
+                                    
                                         <TableCell>{batch.status.toUpperCase()}</TableCell>
 
                                         <TableCell>{Intl.DateTimeFormat('id-ID', {
@@ -339,7 +336,7 @@ const dateFormatSchema = z
     });
 
 
-type BatchesWithWeight = {
+type GrindingWithWeight = {
     id: string
     weight: number
     user: User
