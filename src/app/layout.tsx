@@ -4,6 +4,7 @@ import { GeistSans } from "geist/font/sans";
 import { type Metadata } from "next";
 
 import { TRPCReactProvider } from "~/trpc/react";
+import { SidebarProvider, SidebarTrigger } from "~/components/ui/sidebar";
 
 export const metadata: Metadata = {
   title: "Create T3 App",
@@ -17,8 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${GeistSans.variable}`}>
       <body>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <SidebarProvider>
+          <TRPCReactProvider>{children}</TRPCReactProvider>
+        </SidebarProvider>
       </body>
     </html>
+
   );
 }
