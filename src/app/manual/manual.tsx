@@ -35,13 +35,13 @@ export interface ManualBatch {
         id: string;
         name: string;
         email: string;
-        password: string;
     };
     manualBatchProducts: {
         productId: string;
         quantity: number;
         batchId: string;
     }[];
+   
 }
 
 export interface FreezerItems {

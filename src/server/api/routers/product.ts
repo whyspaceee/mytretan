@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { pusher } from "~/server/soketi/soketi";
 
 import {
   createTRPCRouter,
@@ -7,6 +8,8 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import { grinding, inputProducts, manualBatch, manualBatchToProducts, users } from "~/server/db/schema";
+
+
 
 export const productRouter = createTRPCRouter({
   inputProducts: protectedProcedure.
@@ -60,6 +63,10 @@ export const productRouter = createTRPCRouter({
         }))
       );
 
+      pusher.trigger("monitoring", "update", {
+        message: "new batch",
+      });
+
 
     }),
 
@@ -73,6 +80,10 @@ export const productRouter = createTRPCRouter({
           finishedAt: new Date()
         }).where(eq(manualBatch.batchId, batch.batchId));
       }
+
+      pusher.trigger("monitoring", "update", {
+        message: "batch completed",
+      });
     }),
 
   inputGrinding: protectedProcedure
@@ -93,6 +104,10 @@ export const productRouter = createTRPCRouter({
           status: "grinding"
         }).where(eq(manualBatch.batchId, batch));
       }
+
+      pusher.trigger("monitoring", "update", {
+        message: "grinding",
+      });
     }),
 
   finalWeightIn: protectedProcedure
@@ -105,7 +120,27 @@ export const productRouter = createTRPCRouter({
           finishedAt: new Date()
         }).where(eq(grinding.grindingId, i.grindingId));
       }
+
+      pusher.trigger("monitoring", "update", {
+        message: "grinding completed",
+      });
     }),
+
+    getMonitoring : protectedProcedure.query(async ({ctx}) => {
+      const batches = await ctx.db.query.manualBatch.findMany({
+        with: {
+          user: true,
+          manualBatchProducts: true,
+          grinding: {
+            with: {
+              user: true
+            }
+          }
+        },
+        orderBy: (manualBatch, { desc }) => [desc(manualBatch.createdAt)]
+      });
+      return batches;
+    }), 
 
 });
 

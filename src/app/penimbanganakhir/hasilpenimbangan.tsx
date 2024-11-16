@@ -178,7 +178,7 @@ export default function HasilPenimbanganAkhir({ session, previousGrinding }: { s
 
             <AppSidebar /><main className="min-h-screen w-full  ">
                 <div className="flex flex-row justify-between h-24 bg-gradient-to-r from-[#273F7F] to-[#389CB7]  text-white relative top-0 p-8  ">
-                    <h1 className=" text-2xl font-bold">Hasil Perebusan</h1>
+                    <h1 className=" text-2xl font-bold">Hasil Grinding</h1>
                     <h1 className=" text-2xl font-bold">{Intl.DateTimeFormat('id-ID').format(Date.now())}</h1>
                 </div>
                 <div className="flex flex-col items-start justify-start ">
@@ -211,7 +211,7 @@ export default function HasilPenimbanganAkhir({ session, previousGrinding }: { s
                                                     setBerat(berat)
                                                 }
                                             }
-                                                placeholder="Berat hasil perebusan" />
+                                                placeholder="Berat hasil grinding" />
                                         </div>
                                     </div>
                                 </div>
