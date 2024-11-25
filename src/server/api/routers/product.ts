@@ -71,7 +71,7 @@
           await tx.insert(manualBatch).values({
             batchId,
             userId,
-            slug: `WIP${index}-${today.getFullYear().toString().slice(2,4)}${today.getMonth() + 1}${today.getDate()}`,
+            slug: `W${index}-${today.getFullYear().toString().slice(2,4)}${today.getMonth() + 1}${today.getDate()}`,
             status: "pending",
           })
 
@@ -133,7 +133,7 @@
           const data = await tx.insert(grinding).values({
             grindingId,
             userId,
-            slug: `FP${index}-${today.getFullYear().toString().slice(2,4)}${today.getMonth() + 1}${today.getDate()}`,
+            slug: `F${index}-${today.getFullYear().toString().slice(2,4)}${today.getMonth() + 1}${today.getDate()}`,
             status: "pending",
           }).returning()
 
