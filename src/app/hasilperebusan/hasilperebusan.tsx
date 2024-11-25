@@ -11,21 +11,21 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Session, User } from "next-auth";
+import { type Session, type User } from "next-auth";
 import { api } from "~/trpc/react";
 import { LoadingSpinner } from "~/components/ui/spinner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "~/components/ui/alert-dialog";
-import { ManualBatch } from "../manual/manual";
+import { ManualBatch, type ManualBatchWithSlug } from "../manual/manual";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function HasilPerebusan({ session, previousBatches }: { session: Session, previousBatches: ManualBatch[] }) {
+export default function HasilPerebusan({ session, previousBatches }: { session: Session, previousBatches: ManualBatchWithSlug[] }) {
     const freezers = Array.from({ length: 8 }, (_, i) => i + 1)
     const [barcode, setBarcode] = useState<string>("")
-    const [berat, setBerat] = useState<number>(0)
+    const [berat, setBerat] = useState<string>("")
+    const [beratError, setBeratError] = useState<string | null>(null)
     const [barcodeError, setBarcodeError] = useState<string | null>(null)
-    const [data, setData] = useState<BatchesWithWeight[]>([])
     const [dialogOpen, setDialogOpen] = useState(false)
     const buttonRef = useRef<HTMLButtonElement>(null)
     const router = useRouter()
@@ -34,128 +34,36 @@ export default function HasilPerebusan({ session, previousBatches }: { session: 
 
     const mutation = api.product.updateBatchWeight.useMutation({
         onSuccess: () => {
-            setData([])
+            setBarcode("")
+            setBerat("")
             alert("Data berhasil disimpan")
             router.refresh()
         }
     })
 
     const onSave = async () => {
-        if (data.length === 0) {
-            return
-        }
+        const result = previousBatches.find((batch) => batch.slug === barcode);
+        const weight = parseFloat(berat)
 
-        const batchData = data.map((item) => ({
-            batchId: item.id,
-            weight: item.weight
-        }))
-
-        mutation.mutate(batchData)
-    }
-
-
-    const onSubmit = () => {
-        const result = previousBatches.find((batch) => batch.batchId === barcode);
+        setBeratError(null)
+        setBarcodeError(null)
 
         if (!result) {
             setBarcodeError("Batch tidak ditemukan")
+        }
+
+        if (!weight || weight <= 0) {
+            setBeratError("Berat tidak valid")
+        }
+
+        if (!result || !weight || weight <= 0) {
             return
         }
 
-        setBarcodeError(null)
-
-
-        setData((prevData) => {
-            // Find the item with matching id and freezer
-            const existingItem = prevData.find((item) => item.id === barcode);
-
-            // If the item already exists, update the weight
-            if (existingItem) {
-                return prevData.map((item) => {
-                    if (item.id === barcode) {
-                        return {
-                            ...item,
-                            weight: berat,
-                        };
-                    }
-                    return item;
-                });
-            }
-
-            // If the item doesn't exist, add a new item
-            return [
-                ...prevData,
-                {
-                    id: barcode,
-                    weight: berat,
-                    user: session.user,
-                    createdAt: new Date(),
-                },
-            ];
-        });
-        setBarcode("")
-        setBerat(0)
-    };
-
-    const deleteData = (id: string) => {
-        const newData = data.filter((item) => item.id !== id);
-        setData(newData);
+        const data = { batchId: result.batchId, weight: weight }
+        mutation.mutate(data)
     }
 
-    const columns: ColumnDef<BatchesWithWeight>[] = [
-        {
-            accessorKey: "id",
-            header: "ID Batch",
-        },
-        {
-            accessorKey: "weight",
-            header: "Berat (kg)",
-            cell: (cell) => {
-                return <Input type="number" min={0} step="any" className=" w-24" value={cell.row.original.weight} onChange={
-                    (e) => {
-                        const newValue = parseFloat(e.target.value)
-                        if (newValue > 0) {
-                            const updatedData = [...data];
-                            updatedData[cell.row.index]!.weight = newValue
-                            setData(updatedData)
-                        }
-                    }
-                } />
-            }
-        },
-        {
-            accessorKey: "user",
-            header: "Pegawai Pemroses",
-            cell: (cell) => {
-                return cell.row.original.user.name
-            }
-
-        },
-        {
-            accessorKey: "createdAt",
-            header: "Waktu masuk perebusan",
-            cell: (cell) => {
-                const date = cell.row.original.createdAt;
-                return Intl.DateTimeFormat('id-ID', {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "numeric",
-                    second: "numeric"
-                }).format(date)
-            }
-        },
-        {
-            id: "delete",
-            cell: (cell) => {
-                return <Button onClick={() => {
-                    deleteData(cell.row.original.id)
-                }}>Delete</Button>
-            }
-        }
-
-    ]
 
     return (
         <>
@@ -205,29 +113,24 @@ export default function HasilPerebusan({ session, previousBatches }: { session: 
                                             <Label className=" w-32">Berat (kg)</Label>
                                             <Input type="number" min="0" required step="any" value={berat} onChange={
                                                 (e) => {
-                                                    const berat = parseFloat(e.target.value)
-                                                    setBerat(berat)
+                                                    setBerat(e.target.value)
                                                 }
                                             }
-                                                placeholder="Berat hasil perebusan" />
+                                                placeholder="Berat hasil grinding" />
                                         </div>
-                                    </div>
-                                </div>
+                                        {beratError && <p className="text-red-500">{beratError}</p>}
+
+                                    </div>                                </div>
                             </CardContent>
                             <CardFooter>
-                                <Button ref={buttonRef} onClick={onSubmit}>Submit</Button>
+                                {
+                                    <Button className="" onClick={() => setDialogOpen(true)} disabled={mutation.isPending} >
+                                        {mutation.isPending ? <LoadingSpinner /> : "Simpan"}
+                                    </Button>
+                                }
                             </CardFooter>
                         </Card>
                     </div>
-                    <div className="container px-8">
-                        <DataTable columns={columns} data={data} />
-                    </div>
-                    {
-                        (data.length > 0) &&
-                        <Button className="mx-8 my-4" onClick={() => setDialogOpen(true)} disabled={mutation.isPending} >
-                            {mutation.isPending ? <LoadingSpinner /> : "Simpan"}
-                        </Button>
-                    }
 
                 </div>
                 <Collapsible defaultOpen={true} className="m-8">
@@ -254,7 +157,7 @@ export default function HasilPerebusan({ session, previousBatches }: { session: 
 
                                 {previousBatches.map((batch) => (
                                     <TableRow key={batch.batchId}>
-                                        <TableCell>{batch.batchId}</TableCell>
+                                        <TableCell>{batch.slug}</TableCell> 
                                         <TableCell>
                                             {
                                                 batch.manualBatchProducts.map((product) => (
@@ -269,7 +172,12 @@ export default function HasilPerebusan({ session, previousBatches }: { session: 
                                                 ))
                                             }
                                         </TableCell>
-                                        <TableCell>{batch.status.toUpperCase()}</TableCell>
+                                        <TableCell>{
+                                            batch.status === "pending" ? <p className="text-yellow-500">On Process</p> :
+                                                batch.status === "completed" ? <p className="text-green-500">Completed</p> :
+                                                    batch.status === "grinding" ? <p className="text-green-500">Completed</p> : ""
+                                            
+                                            }</TableCell>
 
                                         <TableCell>{Intl.DateTimeFormat('id-ID', {
                                             year: 'numeric',
@@ -294,14 +202,14 @@ export default function HasilPerebusan({ session, previousBatches }: { session: 
                                             {batch.weight ? batch.weight : "-"}
                                         </TableCell>
                                         <TableCell>
-                                            {batch.user.name}
+                                            {batch.userId}
                                         </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
                         </Table>
                     </CollapsibleContent>
-                </Collapsible> 
+                </Collapsible>
 
 
             </main ></>
@@ -348,66 +256,3 @@ type BatchesWithWeight = {
     createdAt: Date
 }
 
-interface DataTableProps<TData, TValue> {
-    columns: ColumnDef<TData, TValue>[]
-    data: TData[]
-}
-
-
-export function DataTable<TData, TValue>({
-    columns,
-    data,
-}: DataTableProps<TData, TValue>) {
-    const table = useReactTable({
-        data,
-        columns,
-        getCoreRowModel: getCoreRowModel(),
-    })
-
-    return (
-        <div className="rounded-md border">
-            <Table>
-                <TableHeader>
-                    {table.getHeaderGroups().map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                            {headerGroup.headers.map((header) => {
-                                return (
-                                    <TableHead key={header.id}>
-                                        {header.isPlaceholder
-                                            ? null
-                                            : flexRender(
-                                                header.column.columnDef.header,
-                                                header.getContext()
-                                            )}
-                                    </TableHead>
-                                )
-                            })}
-                        </TableRow>
-                    ))}
-                </TableHeader>
-                <TableBody>
-                    {table.getRowModel().rows?.length ? (
-                        table.getRowModel().rows.map((row) => (
-                            <TableRow
-                                key={row.id}
-                                data-state={row.getIsSelected() && "selected"}
-                            >
-                                {row.getVisibleCells().map((cell) => (
-                                    <TableCell key={cell.id}>
-                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                    </TableCell>
-                                ))}
-                            </TableRow>
-                        ))
-                    ) : (
-                        <TableRow>
-                            <TableCell colSpan={columns.length} className="h-24 text-center">
-                                No results.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
-        </div>
-    )
-}

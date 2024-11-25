@@ -6,6 +6,7 @@ import { grinding, inputProducts, manualBatch } from '~/server/db/schema';
 import { and, eq } from 'drizzle-orm';
 import Grinding from './grinding';
 import { ManualBatch } from '../manual/manual';
+import { getBatchDataWithSlug, getGrindingDataWithSlug } from '~/lib/getBatchData';
 
 
 
@@ -16,27 +17,11 @@ export default async function GrindingPage() {
         redirect('/');
     }
 
-    const previousBatches = await db.query.manualBatch.findMany({
-        where:eq(manualBatch.status, "completed"),
-        with: {
-            user: true,
-            manualBatchProducts: true
-        },
-        orderBy: (manualBatch, { desc }) => [desc(manualBatch.createdAt)]
-    }) satisfies ManualBatch[];
 
-    const previousGrinding = await db.query.grinding.findMany({
-        where: eq(grinding.status, "pending"),
-        with: {
-            user: true,
-            manualBatch: true
-        },
-        orderBy: (grinding, { desc }) => [desc(grinding.createdAt)]
-    }) 
-
-    console.log(previousGrinding)
+    const previousGrinding =  (await getGrindingDataWithSlug()).filter((e) => e.status == "pending")
 
 
+    const previousBatches =  (await getBatchDataWithSlug()).filter((e) => e.status == "completed")
 
 
     return (

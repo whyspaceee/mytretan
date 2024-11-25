@@ -9,20 +9,23 @@ import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
+import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Session, User } from "next-auth";
+import { type Session, User } from "next-auth";
 import { api } from "~/trpc/react";
 import { LoadingSpinner } from "~/components/ui/spinner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "~/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
-import { ChevronDown, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronDown, ChevronsUpDown, } from "lucide-react";
 import { revalidatePath } from "next/cache";
 import ReactBarcode from "react-barcode";
 import { useReactToPrint } from "react-to-print";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { useRouter } from "next/navigation";
-import { ManualBatch } from "../manual/manual";
+import { type ManualBatch, type ManualBatchWithSlug } from "../manual/manual";
+import { CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, Command } from "~/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
+import { cn } from "~/lib/utils";
 
 export interface Grinding {
     createdAt: Date;
@@ -32,12 +35,6 @@ export interface Grinding {
     finishedAt: Date | null;
     status: "pending" | "completed";
     weight: number | null;
-    user: {
-        id: string;
-        name: string;
-        email: string;
-        password: string;
-    };
     manualBatch: {
         createdAt: Date;
         updatedAt: Date;
@@ -46,28 +43,53 @@ export interface Grinding {
         weight: number | null;
         batchId: string;
         finishedAt: Date | null;
+        manualBatchProducts: {
+            productId: string;
+            quantity: number;
+            batchId: string;
+        }[];
+    
     }[];
 }
 
+export interface GrindingWithSlug extends Grinding {
+    slug: string;
+    manualBatch: ManualBatchWithSlug[];
+}
 
-export default function Grinding({ session, previousBatches, previousGrinding }: { session: Session, previousBatches: ManualBatch[], previousGrinding: Grinding[] }) {
+
+export default function Grinding({ session, previousBatches, previousGrinding }: { session: Session, previousBatches: ManualBatchWithSlug[], previousGrinding: GrindingWithSlug[] }) {
     const [barcode, setBarcode] = useState<string>("")
     const [barcodeError, setBarcodeError] = useState<string | null>(null)
     const [data, setData] = useState<ManualBatch[]>([])
     const [dialogOpen, setDialogOpen] = useState(false)
+    const [lastID, setLastID] = useState<string | null>(null)
+    const [open, setOpen] = useState(false)
+    const [value, setValue] = useState<string | null>(null)
     const [printDialogData, setPrintDialogData] = useState<string | null>(null)
     const barcodeRef = useRef<HTMLDivElement>(null)
     const router = useRouter()
+
+    useEffect(() => {
+        const slug = previousGrinding.find((item) => item.grindingId === lastID)?.slug
+        if (slug) {
+            setPrintDialogData(slug)
+        }
+    }
+        , [previousGrinding])
 
     const reactToPrintFn = useReactToPrint({
         contentRef: barcodeRef,
     });
 
     const mutation = api.product.inputGrinding.useMutation({
-        onSuccess: () => {
+        onSuccess: (data, _) => {
             setData([])
-            alert("Data berhasil disimpan")
+            const lastID = data.at(0)?.grindingId
             router.refresh()
+            if (lastID) {
+                setLastID(lastID)
+            }
         }
     })
 
@@ -79,13 +101,14 @@ export default function Grinding({ session, previousBatches, previousGrinding }:
         const batches = data.map((batch) => batch.batchId)
 
         await mutation.mutateAsync({
-            batchesId: batches
+            batchesId: batches,
+            userId: value ?? ""
         })
     }
 
 
     const onSubmit = () => {
-        const productData = previousBatches.find((item) => item.batchId === barcode);
+        const productData = previousBatches.find((item) => item.slug === barcode);
 
         if (!productData) {
             setBarcodeError("Produk tidak ditemukan")
@@ -95,7 +118,7 @@ export default function Grinding({ session, previousBatches, previousGrinding }:
         setBarcodeError(null)
 
         setData((prevData) => {
-            if (prevData.find((item) => item.batchId === barcode)) {
+            if (prevData.find((item) => item.batchId === productData.batchId)) {
                 return prevData
             }
 
@@ -111,7 +134,7 @@ export default function Grinding({ session, previousBatches, previousGrinding }:
 
     const columns: ColumnDef<ManualBatch>[] = [
         {
-            accessorKey: "batchId",
+            accessorKey: "slug",
             header: "ID Batch",
         },
         {
@@ -159,11 +182,9 @@ export default function Grinding({ session, previousBatches, previousGrinding }:
         },
 
         {
-            accessorKey: "user",
+            accessorKey: "userId",
             header: "Pegawai",
-            cell: (cell) => {
-                return cell.row.original.user.name
-            }
+
         },
         {
             id: "delete",
@@ -175,6 +196,18 @@ export default function Grinding({ session, previousBatches, previousGrinding }:
         },
 
     ]
+
+    const pegawaiGrinding =
+        [
+            {
+                name: "Irul",
+                id: "IRL"
+            },
+            {
+                name: "Hafiz",
+                id: "HFZ"
+            }
+        ]
 
     return (
         <>
@@ -203,9 +236,10 @@ export default function Grinding({ session, previousBatches, previousGrinding }:
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Cetak barcode?</DialogTitle>
-                        {printDialogData && <div ref={barcodeRef}>
+                        {printDialogData && <div ref={barcodeRef} className="p-4">
                             <ReactBarcode width={1} value={printDialogData} />
-                        </div>}
+                            </div>
+                        }
                     </DialogHeader>
                     <DialogFooter>
                         <Button onClick={() => {
@@ -258,9 +292,56 @@ export default function Grinding({ session, previousBatches, previousGrinding }:
                     <div className="container px-8">
                         <DataTable columns={columns} data={data} />
                     </div>
+                    <Popover open={open} onOpenChange={setOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={open}
+                                className="w-[200px] justify-between mx-8 my-4"
+                            >
+                                {value
+                                    ? `${pegawaiGrinding.find((pegawai) => pegawai.id === value)?.name} - ${value}`
+                                    : "Pilih pegawai"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-0">
+                            <Command>
+                                <CommandInput placeholder="Cari pegawai..." />
+                                <CommandList>
+                                    <CommandEmpty>Pegawai tidak ditemukan</CommandEmpty>
+                                    <CommandGroup>
+
+                                        {pegawaiGrinding.map((pegawai) => (
+                                            <CommandItem
+                                                key={pegawai.id}
+                                                value={pegawai.id}
+                                                onSelect={(currentValue) => {
+                                                    setValue(currentValue)
+                                                    setOpen(false)
+                                                }}
+                                            >
+                                                <Check
+                                                    className={cn(
+                                                        "mr-2 h-4 w-4",
+                                                        value === pegawai.name ? "opacity-100" : "opacity-0"
+                                                    )}
+                                                />
+                                                {pegawai.name} - {pegawai.id}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+
+
+
                     {
-                        (data.length > 0) &&
-                        <Button className="mx-8 my-4" onClick={() => setDialogOpen(true)} disabled={mutation.isPending} >
+                        (data.length > 0 && value) &&
+                        <Button className="mx-8 " onClick={() => setDialogOpen(true)} disabled={mutation.isPending} >
                             {mutation.isPending ? <LoadingSpinner /> : "Simpan"}
                         </Button>
                     }
@@ -284,11 +365,11 @@ export default function Grinding({ session, previousBatches, previousGrinding }:
                             <TableBody>
                                 {previousGrinding.map((batch) => (
                                     <TableRow key={batch.grindingId}>
-                                        <TableCell>{batch.grindingId}</TableCell>
+                                        <TableCell>{batch.slug}</TableCell>
                                         <TableCell>
                                             {
                                                 batch.manualBatch.map((manualBatch) => (
-                                                    <p key={manualBatch.batchId}>{manualBatch.batchId}</p>
+                                                    <p key={manualBatch.batchId}>{manualBatch.slug}</p>
                                                 ))
                                             }
                                         </TableCell>
@@ -302,9 +383,10 @@ export default function Grinding({ session, previousBatches, previousGrinding }:
                                             minute: 'numeric',
                                             second: 'numeric'
                                         }).format(batch.createdAt)}</TableCell>
-                                        <TableCell>{batch.user.name}</TableCell>
+                                        <TableCell>{batch.userId
+                                        }</TableCell>
                                         <TableCell> <Button onClick={() => {
-                                            setPrintDialogData(batch.grindingId)
+                                            setPrintDialogData(batch.slug)
                                         }}>
                                             Cetak</Button></TableCell>
                                     </TableRow>

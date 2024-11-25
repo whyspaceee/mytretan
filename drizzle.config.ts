@@ -1,12 +1,11 @@
 import { type Config } from "drizzle-kit";
-
-import { env } from "~/env";
+import './src/server/db/envConfig';
 
 export default {
   schema: "./src/server/db/schema.ts",
-  dialect: "sqlite",
+  dialect: "postgresql",
   dbCredentials: {
-    url: env.DATABASE_URL,
+    url: process.env.POSTGRES_URL!,
   },
   tablesFilter: ["mytretan_*"],
 } satisfies Config;

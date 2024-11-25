@@ -9,9 +9,9 @@ import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
+import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Session, User } from "next-auth";
+import { type Session, type User } from "next-auth";
 import { api } from "~/trpc/react";
 import { LoadingSpinner } from "~/components/ui/spinner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "~/components/ui/alert-dialog";
@@ -19,14 +19,14 @@ import { ManualBatch } from "../manual/manual";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Grinding } from "../grinding/grinding";
+import { Grinding, type GrindingWithSlug } from "../grinding/grinding";
 
-export default function HasilPenimbanganAkhir({ session, previousGrinding }: { session: Session, previousGrinding: Grinding[] }) {
+export default function HasilPenimbanganAkhir({ session, previousGrinding }: { session: Session, previousGrinding: GrindingWithSlug[] }) {
     const freezers = Array.from({ length: 8 }, (_, i) => i + 1)
     const [barcode, setBarcode] = useState<string>("")
-    const [berat, setBerat] = useState<number>(0)
+    const [berat, setBerat] = useState<string>("")
     const [barcodeError, setBarcodeError] = useState<string | null>(null)
-    const [data, setData] = useState<GrindingWithWeight[]>([])
+    const [beratError, setBeratError] = useState<string | null>(null)
     const [dialogOpen, setDialogOpen] = useState(false)
     const buttonRef = useRef<HTMLButtonElement>(null)
     const router = useRouter()
@@ -36,128 +36,36 @@ export default function HasilPenimbanganAkhir({ session, previousGrinding }: { s
 
     const mutation = api.product.finalWeightIn.useMutation({
         onSuccess: () => {
-            setData([])
             alert("Data berhasil disimpan")
             router.refresh()
         }
     })
 
     const onSave = async () => {
-        if (data.length === 0) {
-            return
-        }
+        const result = previousGrinding.find((batch) => batch.slug === barcode);
+        const weight = parseFloat(berat)
 
-        const input = data.map((item) => ({
-            grindingId: item.id,
-            weight: item.weight
-        }))
-
-        await mutation.mutateAsync(input)
-    }
-
-
-    const onSubmit = () => {
-        const result = previousGrinding.find((batch) => batch.grindingId === barcode);
+        setBeratError(null)
+        setBarcodeError(null)
 
         if (!result) {
             setBarcodeError("Batch tidak ditemukan")
+        }
+
+        if (!weight || weight <= 0) {
+            setBeratError("Berat tidak valid")
+        }
+
+        if (!result || !weight || weight <= 0) {
             return
         }
 
-        setBarcodeError(null)
 
-
-        setData((prevData) => {
-            // Find the item with matching id and freezer
-            const existingItem = prevData.find((item) => item.id === barcode);
-
-            // If the item already exists, update the weight
-            if (existingItem) {
-                return prevData.map((item) => {
-                    if (item.id === barcode) {
-                        return {
-                            ...item,
-                            weight: berat,
-                        };
-                    }
-                    return item;
-                });
-            }
-
-            // If the item doesn't exist, add a new item
-            return [
-                ...prevData,
-                {
-                    id: barcode,
-                    weight: berat,
-                    user: session.user,
-                    createdAt: new Date(),
-                },
-            ];
-        });
-        setBarcode("")
-        setBerat(0)
-    };
-
-    const deleteData = (id: string) => {
-        const newData = data.filter((item) => item.id !== id);
-        setData(newData);
+        await mutation.mutateAsync([{
+            grindingId: result.grindingId,
+            weight: weight
+        }])
     }
-
-    const columns: ColumnDef<GrindingWithWeight>[] = [
-        {
-            accessorKey: "id",
-            header: "ID Grinding",
-        },
-        {
-            accessorKey: "weight",
-            header: "Berat (kg)",
-            cell: (cell) => {
-                return <Input type="number" min={0} step="any" className=" w-24" value={cell.row.original.weight} onChange={
-                    (e) => {
-                        const newValue = parseFloat(e.target.value)
-                        if (newValue > 0) {
-                            const updatedData = [...data];
-                            updatedData[cell.row.index]!.weight = newValue
-                            setData(updatedData)
-                        }
-                    }
-                } />
-            }
-        },
-        {
-            accessorKey: "user",
-            header: "Pegawai Pemroses",
-            cell: (cell) => {
-                return cell.row.original.user.name
-            }
-
-        },
-        {
-            accessorKey: "createdAt",
-            header: "Waktu masuk grinding",
-            cell: (cell) => {
-                const date = cell.row.original.createdAt;
-                return Intl.DateTimeFormat('id-ID', {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "numeric",
-                    minute: "numeric",
-                    second: "numeric"
-                }).format(date)
-            }
-        },
-        {
-            id: "delete",
-            cell: (cell) => {
-                return <Button onClick={() => {
-                    deleteData(cell.row.original.id)
-                }}>Delete</Button>
-            }
-        }
-
-    ]
 
     return (
         <>
@@ -207,28 +115,24 @@ export default function HasilPenimbanganAkhir({ session, previousGrinding }: { s
                                             <Label className=" w-32">Berat (kg)</Label>
                                             <Input type="number" min="0" required step="any" value={berat} onChange={
                                                 (e) => {
-                                                    const berat = parseFloat(e.target.value)
-                                                    setBerat(berat)
+                                                    setBerat(e.target.value)
                                                 }
                                             }
                                                 placeholder="Berat hasil grinding" />
                                         </div>
+                                        {beratError && <p className="text-red-500">{beratError}</p>}
+
                                     </div>
                                 </div>
                             </CardContent>
                             <CardFooter>
-                                <Button ref={buttonRef} onClick={onSubmit}>Submit</Button>
+                                <Button className="" onClick={() => setDialogOpen(true)} disabled={mutation.isPending} >
+                                    {mutation.isPending ? <LoadingSpinner /> : "Simpan"}
+                                </Button>
                             </CardFooter>
                         </Card>
                     </div>
-                    <div className="container px-8">
-                        <DataTable columns={columns} data={data} />
-                    </div>
                     {
-                        (data.length > 0) &&
-                        <Button className="mx-8 my-4" onClick={() => setDialogOpen(true)} disabled={mutation.isPending} >
-                            {mutation.isPending ? <LoadingSpinner /> : "Simpan"}
-                        </Button>
                     }
 
                 </div>
@@ -242,7 +146,7 @@ export default function HasilPenimbanganAkhir({ session, previousGrinding }: { s
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Batch ID</TableHead>
-                                    <TableHead>ID Susu</TableHead>
+                                    <TableHead>ID Batch</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Dibuat pada</TableHead>
                                     <TableHead>Selesai pada</TableHead>
@@ -255,16 +159,20 @@ export default function HasilPenimbanganAkhir({ session, previousGrinding }: { s
 
                                 {previousGrinding.map((batch) => (
                                     <TableRow key={batch.grindingId}>
-                                        <TableCell>{batch.grindingId}</TableCell>
+                                        <TableCell>{batch.slug}</TableCell>
                                         <TableCell>
                                             {
                                                 batch.manualBatch.map((product) => (
-                                                    <p key={product.batchId}>{product.batchId}</p>
+                                                    <p key={product.batchId}>{product.slug}</p>
                                                 ))
                                             }
                                         </TableCell>
-                                    
-                                        <TableCell>{batch.status.toUpperCase()}</TableCell>
+
+                                        <TableCell>{
+
+                                            batch.status === "pending" ? <p className="text-yellow-500">On Process</p> :
+                                                <p className="text-green-500">Completed</p>
+                                        }</TableCell>
 
                                         <TableCell>{Intl.DateTimeFormat('id-ID', {
                                             year: 'numeric',
@@ -289,14 +197,14 @@ export default function HasilPenimbanganAkhir({ session, previousGrinding }: { s
                                             {batch.weight ? batch.weight : "-"}
                                         </TableCell>
                                         <TableCell>
-                                            {batch.user.name}
+                                            {batch.userId}
                                         </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
                         </Table>
                     </CollapsibleContent>
-                </Collapsible> 
+                </Collapsible>
 
 
             </main ></>

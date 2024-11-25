@@ -12,12 +12,10 @@ const globalForSoketi = globalThis as unknown as {
 
 export const pusher =
   globalForSoketi.pusher ?? new Pusher({
-    key: "app-key",
-    secret: "app-secret",
-    appId: "app-id",
-    host: '127.0.0.1',
-    port: "6001",
-    useTLS: false,
+    key: "90ec2f2ea2d4d47ed238",
+    secret: "470bdc3dfa30ecdd8b33",
+    appId: "1901016",
+    cluster: "ap1"
   })
 
 

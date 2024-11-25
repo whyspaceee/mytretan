@@ -5,6 +5,7 @@ import Manual, { ManualBatch } from './manual';
 import { db } from '~/server/db';
 import { inputProducts, manualBatch } from '~/server/db/schema';
 import { and, eq } from 'drizzle-orm';
+import { getBatchDataWithSlug } from '~/lib/getBatchData';
 
 
 
@@ -15,16 +16,13 @@ export default async function ManualPage() {
         redirect('/');
     }
 
-    const previousBatches = await db.query.manualBatch.findMany({
-        where:  eq(manualBatch.status, "pending"),
-        with: {
-            user: true,
-            manualBatchProducts: true
-        },
-        orderBy: (manualBatch, { desc }) => [desc(manualBatch.createdAt)]
-    });
+    const previousBatches = (await getBatchDataWithSlug()).filter((e) => e.status == "pending")
+
 
     const freezerItems = await db.select().from(inputProducts)
+
+    //for each batch item, create slug sorted from date time
+    //example:  WIP1-241019, WIP2-241019, WIP3-241019
 
 
 

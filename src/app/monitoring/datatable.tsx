@@ -1,157 +1,243 @@
 "use client"
-import { ColumnDef, useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
+import { type ColumnDef, useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table"
 import { useMemo } from "react"
 import { TableHeader, TableRow, TableHead, TableBody, TableCell, Table } from "~/components/ui/table"
-import { Grinding } from "../grinding/grinding"
+import { Grinding, type GrindingWithSlug } from "../grinding/grinding"
+import { type ManualBatchWithSlug } from "../manual/manual"
 
 interface DataTableProps<TData, TValue> {
     data: TData[],
     columns: ColumnDef<TValue>[],
 }
-
 const columns: ColumnDef<Monitoring>[] = [
     {
-        accessorKey: "batchId",
-        header: "ID Batch",
+        id: "batchId",
+        accessorKey: "manualBatch.slug",
+        header: "ID Perebusan",
+        cell: (cell) => cell.row.original.manualBatch?.map((e) => <p key={e.manualBatchId}>{e.slug}</p> )
+
     },
     {
-        id: "manualBatchProducts",
-        accessorKey: "manualBatchProducts",
-        header: "Kode Produk",
+        id: "manualBatch",
+        accessorKey: "manualBatch.status",
+        header: "Status Perebusan",
         cell: (cell) => {
-            return cell.row.original.manualBatchProducts.map((product) => <p key={product.productId}>{product.productId}</p>)
-        }
+            return cell.row.original.manualBatch?.map((e) => {
+                console.log("manualgtw", e.status)
+
+                if (e.status == "pending") {
+                    return <p key={e.manualBatchId} className="text-yellow-500">On Process</p>;
+                }
+                if (e.status == "completed") {
+                    return <p key={e.manualBatchId} className="text-green-500">Completed</p>;
+                }
+                if (e.status == "grinding") {
+                    return <p key={e.manualBatchId} className="text-green-500">Completed</p>;
+                }
+            })
+        },
+
+
+    },
+    {
+        id: "susu",
+        accessorKey: "manualBatch.manualBatchProducts",
+        header: "Susu",
+        cell : (cell) => 
+            cell.row.original.manualBatch?.map((e) => {
+                return e.manualBatchProducts?.map((product) => {
+                        return <p key={product.productId}> {product.productId} </p>
+                    
+                })
+            })
+        
+
     },
     {
         id: "qty",
-        accessorKey: "manualBatchProducts",
+        accessorKey: "manualBatch.manualBatchProducts",
         header: "Jumlah (L)",
-        cell: (cell) => {
-            return cell.row.original.manualBatchProducts.map((product) => <p key={product.productId}>{product.quantity}</p>)
-        }
+        cell : (cell) => 
+            cell.row.original.manualBatch?.map((e) => {
+                return e.manualBatchProducts?.map((product) => {
+                        return <p key={product.productId}> {product.quantity} </p>
+                    
+                })
+            })
+        
+
     },
     {
-        accessorKey: "user",
-        header: "Pegawai Manual",
-        cell: (cell) => {
-            return cell.row.original.user.name
-        }
+        id: "manualBatchFinishedAt",
+        accessorKey: "manualBatch",
+        header: "Waktu Perebusan Selesai",
+        cell: (cell) => 
+            cell.row.original.manualBatch?.map((e) => {
+                if (e.finishedAt) {
+                    return <p key={e.manualBatchId}>{Intl.DateTimeFormat("id-ID", {
+                        year: "numeric",
+                        month: "numeric",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                        second: "numeric",
+                    }).format(new Date(e.finishedAt))}
+                    </p>
+                }
+                return "-"
+            })
+        ,
     },
+    {
+        id: "manualBatchWeight",
+        accessorKey: "manualBatch",
+        header: "Berat (Kg)",
+        cell: (cell) => 
+            cell.row.original.manualBatch?.map((e) => {
+                if (e.weight) {
+                    return <p key = {e.manualBatchId}> {e.weight}</p>
+                }
+                return "-"
+            })
+        ,
+    },
+    {
+        id: "pekerjaperebusan",
+        accessorKey: "manualBatch",
+        header: "Pekerja P.",
+        cell: (cell) => cell.row.original.manualBatch?.map((e) => <p key={e.manualBatchId}>{e.userId}</p>), 
+    },
+
     {
         accessorKey: "status",
-        header: "Status Perebusan",
+        header: "Status GnM",
         cell: (cell) => {
             if (cell.row.original.status === "pending") {
-                return <p className="text-yellow-500">Pending</p>
+                return <p className="text-yellow-500">On Process</p>;
             }
             if (cell.row.original.status === "completed") {
-                return <p className="text-green-500">Completed</p>
+                return <p className="text-green-500">Completed</p>;
             }
-            if (cell.row.original.status === "grinding") {
-                return <p className="text-green-500">Completed</p>
-            }
-        }
-    },
-    {
-        accessorKey: "weight",
-        header: "Berat (Kg)",
+        },
     },
     {
         accessorKey: "finishedAt",
         header: "Waktu Selesai",
         cell: (cell) =>
-            cell.row.original.finishedAt ?
-                Intl.DateTimeFormat('id-ID',{
-                    year: 'numeric',
-                    month: 'numeric',
-                    day: 'numeric',
-                    hour: 'numeric',
-                    minute: 'numeric',
-                    second: 'numeric'
-                }).format(new Date(cell.row.original.finishedAt)) : "-"
+            cell.row.original.finishedAt
+                ? Intl.DateTimeFormat("id-ID", {
+                    year: "numeric",
+                    month: "numeric",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "numeric",
+                    second: "numeric",
+                }).format(new Date(cell.row.original.finishedAt))
+                : "-",
+    },
 
-    },
-    // if grinding is started, combine the rows with the same grindingId
-    
     {
-        id: "grinding",
-        accessorKey: "grinding",
-        header: "Grinding",
-        cell: (cell) => {
-            if (cell.row.original.grinding) {
-                return cell.row.original.grinding.status.toUpperCase()
-            }
-            return "-"
-        }
+        accessorKey: "weight",
+        header: "Berat (Kg)",
     },
     {
-        id: "grindingWeight",
-        accessorKey: "grinding",
-        header: "Grinding Weight",
-        cell: (cell) => {
-            if (cell.row.original.grinding) {
-                return cell.row.original.grinding.weight
-            }
-            return "-"
-        }
+        accessorKey: "userId",
+        header: "Pekerja GnM",
     },
     {
-        id: "grindingFinishedAt",
-        accessorKey: "grinding",
-        header: "Grinding Selesai",
-        cell: (cell) => {
-            if (cell.row.original.grinding) {
-                return cell.row.original.grinding.finishedAt ?
-                    Intl.DateTimeFormat('id-ID',{
-                        year: 'numeric',
-                        month: 'numeric',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: 'numeric',
-                        second: 'numeric'
-                    }).format(new Date(cell.row.original.grinding.finishedAt)) : "-"
-            }
-            return "-"
-        }
+        accessorKey: "slug",
+        header: "ID Produk",
     },
-    {
-        accessorKey: "grinding.grindingId",
-        header: "ID Produk Akhir"
-    }
 
+    // Combine rows with the same manualBatchId if manualBatch is active
+];
 
-]
 
 
 
 
 interface Monitoring {
-    createdAt: Date;
-    updatedAt: Date;
-    userId: string;
-    status: "pending" | "completed" | "grinding";
+    createdAt: Date | null;
+    userId: string | null;
+    status: string | null;
     weight: number | null;
-    batchId: string;
-    finishedAt: Date | null;
     grindingId: string | null;
-    user: {
-      name: string;
-    };
-    manualBatchProducts: {
-        productId: string;
-        quantity: number;
-    }[];
-    grinding: {
-        grindingId: string;
-        status: "pending" | "completed";
+    finishedAt: Date | null;
+    slug: string | null;
+    manualBatch?: {
+        manualBatchId: string;
+        status: string;
+        slug: string;
         weight: number | null;
         finishedAt: Date | null;
-    } | null;
+        userId: string
+        manualBatchProducts?: {
+            productId: string;
+            quantity: number;
+        }[];
+    }[];
 }
 
 export function DataTable({
-    data
-}: { data: (Monitoring)[] }) {
+    previousBatches,
+    previousGrinding
+}: {
+    previousBatches: (ManualBatchWithSlug)[],
+    previousGrinding: (GrindingWithSlug[])
+}) {
+
+    console.log("prev",previousGrinding)
+
+    const data = useMemo(() => {
+        const batchesPriorToGrinding = previousBatches.filter((batch) => !batch.grindingId).map((batch) => ({
+            createdAt: null,
+            userId: null,
+            status: null,
+            weight: null,
+            grindingId: null,
+            finishedAt: null,
+            slug: null,
+            manualBatch: [{
+                slug: batch.slug,
+                userId: batch.userId,
+                manualBatchId: batch.batchId,
+                status: batch.status,
+                weight: batch.weight,
+                finishedAt: batch.finishedAt,
+                manualBatchProducts: batch.manualBatchProducts,
+            }]
+
+        })
+        )
+
+        const previousGrindingMonitoringFormat = previousGrinding.map((grinding) => ({
+            createdAt: grinding.createdAt,
+            userId: grinding.userId,
+            status: grinding.status,
+            weight: grinding.weight,
+            grindingId: grinding.grindingId,
+            finishedAt: grinding.finishedAt,
+            slug: grinding.slug,
+            manualBatch: grinding.manualBatch.map((batch) => ({
+                slug: batch.slug,
+                userId: batch.userId,
+                manualBatchId: batch.batchId,
+                status: batch.status,
+                weight: batch.weight,
+                finishedAt: batch.finishedAt,
+                manualBatchProducts: batch.manualBatchProducts,
+            }))
+        }))
+
+
+
+
+        return [...batchesPriorToGrinding, ...previousGrindingMonitoringFormat]
+    }, [previousBatches, previousGrinding])
+
+
+    console.log("data", data)
+
     const table = useReactTable({
         data,
         columns,
@@ -182,7 +268,7 @@ export function DataTable({
                 </TableHeader>
                 <TableBody>
                     {table.getRowModel().rows?.length ? (
-                        
+
                         table.getRowModel().rows.map((row) => (
                             <TableRow
                                 key={row.id}
@@ -194,16 +280,16 @@ export function DataTable({
                                     </TableCell>
                                 ))}
                             </TableRow>
-                        ))                        
-                    ) 
+                        ))
+                    )
 
-                    : (
-                        <TableRow>
-                            <TableCell colSpan={columns.length} className="h-24 text-center">
-                                No results.
-                            </TableCell>
-                        </TableRow>
-                    )}
+                        : (
+                            <TableRow>
+                                <TableCell colSpan={columns.length} className="h-24 text-center">
+                                    No results.
+                                </TableCell>
+                            </TableRow>
+                        )}
                 </TableBody>
             </Table>
         </div>

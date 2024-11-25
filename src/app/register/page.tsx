@@ -37,7 +37,11 @@ export default function Register() {
   });
 
 
-  const onSubmit = (data: any) => {
+  const onSubmit = (data: {
+    email: string;
+    name: string;
+    password: string;
+  }) => {
     registerUser.mutate(data);
   };
 

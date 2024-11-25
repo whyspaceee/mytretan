@@ -1,0 +1,35 @@
+{
+    "pegawaiPerebusan": [
+      {
+        "name": "Aqila",
+        "id": "AQL"
+      },
+      {
+        "name": "Ibnu",
+        "id": "IBN"
+      },
+      {
+        "name": "Damar",
+        "id": "DMR"
+      },
+      {
+        "name": "Angela",
+        "id": "ANG"
+      },
+      {
+        "name": "Ahlam",
+        "id": "AHL"
+      }
+    ],
+    "pegawaiGrinding": [
+      {
+        "name": "Irul",
+        "id": "IRL"
+      },
+      {
+        "name": "Hafiz",
+        "id": "HFZ"
+      }
+    ]
+  }
+  

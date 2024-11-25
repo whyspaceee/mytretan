@@ -4,6 +4,7 @@ import HasilPerebusan from './hasilperebusan';
 import { eq } from 'drizzle-orm';
 import { db } from '~/server/db';
 import { manualBatch } from '~/server/db/schema';
+import { getBatchDataWithSlug } from '~/lib/getBatchData';
 
 export default async function HasilPerebusanPage() {
     const session = await auth();
@@ -12,14 +13,9 @@ export default async function HasilPerebusanPage() {
         redirect('/');
     }
 
-    const previousBatches = await db.query.manualBatch.findMany({
-        where: eq(manualBatch.status, "pending"),
-        with: {
-            user: true,
-            manualBatchProducts: true,
-        },
-        orderBy: (manualBatch, { desc }) => [desc(manualBatch.createdAt)]
-    });
+    const previousBatches = (await getBatchDataWithSlug()).filter((e) => e.status == "pending" || e.status == "completed")
+    
+    
 
     return (
         <HasilPerebusan session={session} previousBatches={previousBatches}  />

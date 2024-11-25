@@ -9,12 +9,13 @@ import { Label } from "~/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
-import { ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
+import { type ColumnDef, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
-import { Session, User } from "next-auth";
+import { type Session, User } from "next-auth";
 import { api } from "~/trpc/react";
 import { LoadingSpinner } from "~/components/ui/spinner";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "~/components/ui/alert-dialog";
+import { ArrowDown, ArrowUp } from "lucide-react";
 
 export default function Kedatangan({ session }: { session: Session }) {
     const freezers = Array.from({ length: 8 }, (_, i) => i + 1)
@@ -103,16 +104,38 @@ export default function Kedatangan({ session }: { session: Session }) {
             accessorKey: "jumlah",
             header: "Jumlah",
             cell: (cell) => {
-                return <Input type="number" className=" w-24" value={cell.row.original.jumlah} onChange={
-                    (e) => {
-                        const newValue = parseInt(e.target.value)
-                        if (newValue > 0) {
-                            const updatedData = [...data];
-                            updatedData[cell.row.index]!.jumlah = parseInt(e.target.value)
-                            setData(updatedData)
+                return <div className="inline-flex items-center gap-4">
+                    <Input type="number" className=" w-24" value={cell.row.original.jumlah} onChange={
+                        (e) => {
+                            const newValue = parseInt(e.target.value)
+                            if (newValue > 0) {
+                                const updatedData = [...data];
+                                updatedData[cell.row.index]!.jumlah = parseInt(e.target.value)
+                                setData(updatedData)
+                            }
                         }
-                    }
-                } />
+                    } />
+                    <div className="flex flex-col gap-1">
+                        <Button onClick={() => {
+                            const updatedData = [...data];
+                            updatedData[cell.row.index]!.jumlah += 1
+                            setData(updatedData)
+                        }} className=" w-2 h-6">
+                            <ArrowUp />
+                        </Button>
+                        <Button onClick={
+                            () => {
+                                const updatedData = [...data];
+                                if (updatedData[cell.row.index]!.jumlah > 0) {
+                                    updatedData[cell.row.index]!.jumlah -= 1
+                                    setData(updatedData)
+                                }
+                            }
+                        } className=" w-2 h-6">
+                            <ArrowDown />
+                        </Button>
+                    </div>
+                </div>
             }
         },
         {
@@ -199,7 +222,7 @@ export default function Kedatangan({ session }: { session: Session }) {
                         <DataTable columns={columns} data={data} />
                     </div>
                     {
-                        (data.length > 0) && 
+                        (data.length > 0) &&
                         <Button className="mx-8 my-4" onClick={() => setDialogOpen(true)} disabled={mutation.isPending} >
                             {mutation.isPending ? <LoadingSpinner /> : "Simpan"}
                         </Button>
