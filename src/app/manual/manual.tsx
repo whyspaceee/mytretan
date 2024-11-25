@@ -264,11 +264,11 @@ export default function Manual({ session, previousBatches, freezerItems }: { ses
                     }
                 }
             }>
-                <DialogContent className=" w-fit h-96">
+                <DialogContent className=" w-fit">
                     <DialogHeader>
                         <DialogTitle>Cetak barcode?</DialogTitle>
-                        {printDialogData && <div ref={barcodeRef} className=" top-16 relative w-fit p-4 rotate-90">
-                            <ReactBarcode width={2}   value={printDialogData} />
+                        {printDialogData && <div ref={barcodeRef} className="  relative w-fit p-4 ">
+                            <ReactBarcode width={2.5}   value={printDialogData} />
                             </div>
                         }
                     </DialogHeader>
