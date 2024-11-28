@@ -160,7 +160,8 @@ export default function Manual({ session, previousBatches, freezerItems }: { ses
             }
             return [...prevData, {
                 id: productData.productId,
-                jumlah: 1,
+                jumlah: 0,
+                stok: productData.quantity,
                 supplier: productData.supplier,
                 tanggal: productData.productdate
             }]
@@ -179,14 +180,18 @@ export default function Manual({ session, previousBatches, freezerItems }: { ses
             header: "ID Produk",
         },
         {
+            accessorKey: "stok",
+            header: "Stok (L)",
+        },
+        {
             accessorKey: "jumlah",
-            header: "Jumlah",
+            header: "Jumlah (L)",
             cell: (cell) => {
                 return <div className="inline-flex items-center gap-4">
                     <Input type="number" className=" w-24" value={cell.row.original.jumlah} onChange={
                         (e) => {
                             const newValue = parseInt(e.target.value)
-                            if (newValue > 0) {
+                            if (newValue > 0 && newValue <= cell.row.original.stok) {
                                 const updatedData = [...data];
                                 updatedData[cell.row.index]!.jumlah = parseInt(e.target.value)
                                 setData(updatedData)
@@ -196,8 +201,10 @@ export default function Manual({ session, previousBatches, freezerItems }: { ses
                     <div className="flex flex-col gap-1">
                         <Button onClick={() => {
                             const updatedData = [...data];
-                            updatedData[cell.row.index]!.jumlah += 1
-                            setData(updatedData)
+                            if (updatedData[cell.row.index]!.jumlah < cell.row.original.stok) {
+                                updatedData[cell.row.index]!.jumlah += 1
+                                setData(updatedData)
+                            }
                         }} className=" w-2 h-6">
                             <ArrowUp />
                         </Button>
@@ -268,8 +275,8 @@ export default function Manual({ session, previousBatches, freezerItems }: { ses
                     <DialogHeader>
                         <DialogTitle>Cetak barcode?</DialogTitle>
                         {printDialogData && <div ref={barcodeRef} className="  relative w-fit">
-                            <ReactBarcode width={2.5} margin={2}   value={printDialogData} />
-                            </div>
+                            <ReactBarcode width={2.5} margin={2} value={printDialogData} />
+                        </div>
                         }
                     </DialogHeader>
                     <DialogFooter>
@@ -473,6 +480,7 @@ const dateFormatSchema = z
 type InputPerebusan = {
     id: string
     jumlah: number
+    stok: number
     supplier: string
     tanggal: Date
 }

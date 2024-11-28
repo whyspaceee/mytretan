@@ -75,6 +75,7 @@ export const inputProducts = createTable(
     userId: text("userId")
       .notNull()
       .references(() => users.id),
+    input : integer("input").notNull(),
     quantity: integer("quantity").notNull(),
     supplier: text("supplier").notNull(),
     productdate: timestamp("productdate").notNull(),

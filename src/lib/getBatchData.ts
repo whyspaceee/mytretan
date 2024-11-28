@@ -73,3 +73,17 @@ export async function getGrindingDataWithSlug(): Promise<GrindingWithSlug[]> {
 // }
 
 //Aqila (AQL), Ibnu (IBN), Damar (DMR), Angela (ANG), Ahlam (AHL)
+
+export const pegawaiPerebusan = [
+  { id: "AQL", name: "Aqila" },
+  { id: "IBN", name: "Ibnu" },
+  { id: "DMR", name: "Damar" },
+  { id: "ANG", name: "Angela" },
+  { id: "AHL", name: "Ahlam" }
+]
+
+export const pegawaiGrinding = [
+  { id: "IRL", name: "Irul" },
+  { id: "HFZ", name: "Hafiz" },
+]
+

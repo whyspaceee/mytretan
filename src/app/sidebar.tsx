@@ -1,4 +1,4 @@
-import { Calendar, ClipboardPen, Search, Settings } from "lucide-react"
+import { Calendar, ClipboardPen, Clock, Search, Settings } from "lucide-react"
 import { SidebarContent, SidebarGroup, SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, Sidebar } from "~/components/ui/sidebar"
 
 
@@ -32,9 +32,9 @@ const items = [
     ]
   },
   {
-    title: "Calendar",
-    url: "#",
-    icon: Calendar,
+    title: "Performance",
+    url: "/performance",
+    icon: Clock,
   },
   {
     title: "Monitoring",

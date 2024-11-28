@@ -21,7 +21,6 @@ import { ChevronsUpDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function HasilPerebusan({ session, previousBatches }: { session: Session, previousBatches: ManualBatchWithSlug[] }) {
-    const freezers = Array.from({ length: 8 }, (_, i) => i + 1)
     const [barcode, setBarcode] = useState<string>("")
     const [berat, setBerat] = useState<string>("")
     const [beratError, setBeratError] = useState<string | null>(null)
